@@ -80,11 +80,13 @@ def normalize(path):
 
 def main(dest_box, options):
     is_gmail = options.gmail
+    msg_id = options.thread
     filter_path = options.base_path
     history_path = normalize(options.history_path)
     if history_path and os.path.exists(history_path):
         readline.read_history_file(history_path)
-    query = input('Query: ')
+    if not options.thread:
+        query = input('Query: ')
     if history_path:
       readline.write_history_file(history_path)
 
@@ -93,7 +95,13 @@ def main(dest_box, options):
 
     empty_dir(dest_box)
 
-    files = command('notmuch search --output=files {}'.format(quote(query))).split('\n')
+    if msg_id:
+        thread_id = command('notmuch search --output=threads id:' + msg_id)
+        cmd = 'notmuch search --output=files %s' % thread_id
+        files = command(cmd).split('\n')
+    else:
+        cmd = 'notmuch search --output=files {}' 
+        files = command(cmd.format(quote(query))).split('\n')
 
     data = defaultdict(list)
     messages = []
@@ -136,6 +144,8 @@ if __name__ == '__main__':
                  help='Normal, non-gmail-specific behavior')
     p.add_option('-p', '--base-path', dest='base_path',
                  help='Only include messages in given base path')
+    p.add_option('-t', '--thread', dest='thread', default=False,
+                 help='Retrieves full thread from a given message ID')
     p.add_option('--history-path', dest='history_path',
                  help='Save/restore query history to given path')
     p.add_option('-v', '--version', dest='version', action='store_true',
